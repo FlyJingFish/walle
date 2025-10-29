@@ -72,11 +72,6 @@ task aaBumpVersion() {
         versionProps.store(versionPropsFile.newWriter(), null)
 
         updateREADME("README.md",oldVersionName,newVersionName)
-        updateREADME("README-zh.md",oldVersionName,newVersionName)
-        updateREADME("docs/getting_started.md",oldVersionName,newVersionName)
-        updateREADME("docs/android_aop_extra.md",oldVersionName,newVersionName)
-        updateREADME("docs/zh/getting_started.md",oldVersionName,newVersionName)
-        updateREADME("docs/zh/android_aop_extra.md",oldVersionName,newVersionName)
 
 
 
@@ -124,11 +119,6 @@ task aaBumpVersion1() {
         versionProps.store(versionPropsFile.newWriter(), null)
 
         updateREADME("README.md",oldVersionName,newVersionName)
-        updateREADME("README-zh.md",oldVersionName,newVersionName)
-        updateREADME("docs/getting_started.md",oldVersionName,newVersionName)
-        updateREADME("docs/android_aop_extra.md",oldVersionName,newVersionName)
-        updateREADME("docs/zh/getting_started.md",oldVersionName,newVersionName)
-        updateREADME("docs/zh/android_aop_extra.md",oldVersionName,newVersionName)
 
 
 
@@ -155,31 +145,14 @@ task aaBumpVersion2() {
     }
 }
 
-//subprojects { subproject ->
-//    subproject.afterEvaluate {
-//        def list = new ArrayList<String>()
-//        subproject.tasks.forEach { task ->
-//            if (task.name.contains("publish")){
-//                println("task.name="+task.name)
-//            }
-//
-//            if ("publishAllPublicationsToMavenCentralRepository" == task.name){
-//                list.add("${subproject.path}:publishMavenPublicationToMavenLocal")
-//            }
-//        }
-//        aaBumpVersion.finalizedBy(list.toArray())
-//    }
-//}
 def updateREADME(readme,oldVersionName,newVersionName) {
     File configFile = new File(readme)
     String exportText = configFile.text
-    String text = exportText.replace("io.github.flyjingfish:androidaop-plugin:"+oldVersionName,"io.github.flyjingfish:androidaop-plugin:"+newVersionName)
-    text = text.replace("io.github.flyjingfish:androidaop-core:"+oldVersionName,"io.github.flyjingfish:androidaop-core:"+newVersionName)
-    text = text.replace("io.github.flyjingfish:androidaop-annotation:"+oldVersionName,"io.github.flyjingfish:androidaop-annotation:"+newVersionName)
-    text = text.replace("io.github.flyjingfish:androidaop-extra:"+oldVersionName,"io.github.flyjingfish:androidaop-extra:"+newVersionName)
-    text = text.replace("io.github.flyjingfish:androidaop-apt:"+oldVersionName,"io.github.flyjingfish:androidaop-apt:"+newVersionName)
-    text = text.replace("id \"io.github.flyjingfish.androidaop\" version \""+oldVersionName+"\"","id \"io.github.flyjingfish.androidaop\" version \""+newVersionName+"\"")
-    text = text.replace("id(\"io.github.flyjingfish.androidaop\") version \""+oldVersionName+"\"","id(\"io.github.flyjingfish.androidaop\") version \""+newVersionName+"\"")
+    String text = exportText.replace("io.github.flyjingfish:walle-plugin:"+oldVersionName,"io.github.flyjingfish:walle-plugin:"+newVersionName)
+    text = text.replace("io.github.flyjingfish:walle-cli:"+oldVersionName,"io.github.flyjingfish:walle-cli:"+newVersionName)
+    text = text.replace("io.github.flyjingfish:walle-payload-writer:"+oldVersionName,"io.github.flyjingfish:walle-payload-writer:"+newVersionName)
+    text = text.replace("io.github.flyjingfish:walle-payload-reader:"+oldVersionName,"io.github.flyjingfish:walle-payload-reader:"+newVersionName)
+    text = text.replace("io.github.flyjingfish:walle-library:"+oldVersionName,"io.github.flyjingfish:walle-library:"+newVersionName)
     configFile.write(text)
 }
 
