@@ -40,10 +40,11 @@ import java.util.TreeMap;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 
+import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OutputStream;
 import org.bouncycastle.asn1.DERNull;
-import org.bouncycastle.asn1.DEROutputStream;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
@@ -454,37 +455,44 @@ public abstract class V1SchemeSigner {
 
         return out.toByteArray();
     }
-
     private static byte[] generateSignatureBlock(
             SignerConfig signerConfig, byte[] signatureFileBytes)
-                    throws InvalidKeyException, CertificateEncodingException, SignatureException {
+            throws InvalidKeyException, CertificateEncodingException, SignatureException {
+
         JcaCertStore certs = new JcaCertStore(signerConfig.certificates);
         X509Certificate signerCert = signerConfig.certificates.get(0);
-        String jcaSignatureAlgorithm =
-                getJcaSignatureAlgorithm(
-                        signerCert.getPublicKey(), signerConfig.signatureDigestAlgorithm);
+
+        String jcaSignatureAlgorithm = getJcaSignatureAlgorithm(
+                signerCert.getPublicKey(), signerConfig.signatureDigestAlgorithm);
+
         try {
-            ContentSigner signer =
-                    new JcaContentSignerBuilder(jcaSignatureAlgorithm)
+            ContentSigner signer = new JcaContentSignerBuilder(jcaSignatureAlgorithm)
                     .build(signerConfig.privateKey);
+
             CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
             gen.addSignerInfoGenerator(
                     new SignerInfoGeneratorBuilder(
                             new JcaDigestCalculatorProviderBuilder().build(),
                             SignerInfoSignatureAlgorithmFinder.INSTANCE)
                             .setDirectSignature(true)
-                            .build(signer, new JcaX509CertificateHolder(signerCert)));
+                            .build(signer, new JcaX509CertificateHolder(signerCert))
+            );
             gen.addCertificates(certs);
 
-            CMSSignedData sigData =
-                    gen.generate(new CMSProcessableByteArray(signatureFileBytes), false);
+            CMSSignedData sigData = gen.generate(
+                    new CMSProcessableByteArray(signatureFileBytes),
+                    false // detached = false
+            );
 
+            // ✅ 新写法（替代 DEROutputStream）
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             try (ASN1InputStream asn1 = new ASN1InputStream(sigData.getEncoded())) {
-                DEROutputStream dos = new DEROutputStream(out);
-                dos.writeObject(asn1.readObject());
+                ASN1OutputStream asn1Out = ASN1OutputStream.create(out, ASN1Encoding.DER);
+                asn1Out.writeObject(asn1.readObject());
             }
+
             return out.toByteArray();
+
         } catch (OperatorCreationException | CMSException | IOException e) {
             throw new SignatureException("Failed to generate signature", e);
         }

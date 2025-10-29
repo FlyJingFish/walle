@@ -1,28 +1,25 @@
 import com.android.build.gradle.api.BaseVariant
 
 apply plugin: 'com.android.application'
-apply plugin: 'walle'
-apply from: rootProject.file('quality.gradle')
+//apply plugin: 'walle'
+apply from: "$rootDir/gradle/android_base.gradle"
 
 buildscript {
     repositories {
         mavenLocal()
-        jcenter()
+        google()
+        mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.2.0'
-        classpath "com.meituan.android.walle:plugin:latest.integration"
+        classpath 'com.android.tools.build:gradle:8.2.2'
+//        classpath "com.meituan.android.walle:plugin:latest.integration"
     }
 }
 
 android {
-
-    compileSdkVersion rootProject.ext.compileSdkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
+    namespace 'com.meituan.android.walle.sample'
 
     defaultConfig {
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
 
         versionCode 101
         versionName "1.0.1"
@@ -83,19 +80,18 @@ configurations.all {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:support-v4:24.1.1'
-    compile 'com.android.support:appcompat-v7:24.1.1'
-    compile project(':library')
+    implementation libs.core.ktx
+    implementation libs.appcompat
+    implementation project(':library')
 }
 
-walle {
-    apkOutputFolder = new File("${project.buildDir}/outputs/channels")
-    apkFileNameFormat = '${appName}-${packageName}-${channel}-${buildType}-v${versionName}-${versionCode}-${buildTime}-${flavorName}.apk'
-    //configFile与channelFile两者必须存在一个，否则无法生成渠道包。两者都存在时优先执行configFile
-    channelFile = new File("${project.getProjectDir()}/channel")
-    //configFile = new File("${project.getProjectDir()}/config.json")
-}
+//walle {
+//    apkOutputFolder = new File("${project.buildDir}/outputs/channels")
+//    apkFileNameFormat = '${appName}-${packageName}-${channel}-${buildType}-v${versionName}-${versionCode}-${buildTime}-${flavorName}.apk'
+//    //configFile与channelFile两者必须存在一个，否则无法生成渠道包。两者都存在时优先执行configFile
+//    channelFile = new File("${project.getProjectDir()}/channel")
+//    //configFile = new File("${project.getProjectDir()}/config.json")
+//}
 
 
 // 根据不同的applicationId来配置不同的channelFile／configFile
