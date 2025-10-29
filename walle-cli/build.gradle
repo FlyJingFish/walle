@@ -14,10 +14,11 @@ apply plugin: 'com.github.johnrengelman.shadow'
 apply from: "$rootDir/gradle/java_base.gradle"
 apply from: "$rootDir/gradle/java_publish.gradle"
 
+def appVersionName = getAppVersionName()
 jar {
     manifest {
         attributes 'Main-Class': 'com.meituan.android.walle.Main'
-        attributes 'Walle-Version': VERSION_NAME
+        attributes 'Walle-Version': appVersionName
     }
 }
 

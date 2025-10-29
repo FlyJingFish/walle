@@ -1,7 +1,7 @@
 import com.android.build.gradle.api.BaseVariant
 
 apply plugin: 'com.android.application'
-//apply plugin: 'walle'
+apply plugin: 'walle'
 apply from: "$rootDir/gradle/android_base.gradle"
 
 buildscript {
@@ -12,7 +12,7 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.2.2'
-//        classpath "com.meituan.android.walle:plugin:latest.integration"
+        classpath "io.github.flyjingfish:walle-plugin:latest.integration"
     }
 }
 
@@ -85,13 +85,13 @@ dependencies {
     implementation project(':library')
 }
 
-//walle {
-//    apkOutputFolder = new File("${project.buildDir}/outputs/channels")
-//    apkFileNameFormat = '${appName}-${packageName}-${channel}-${buildType}-v${versionName}-${versionCode}-${buildTime}-${flavorName}.apk'
-//    //configFile与channelFile两者必须存在一个，否则无法生成渠道包。两者都存在时优先执行configFile
-//    channelFile = new File("${project.getProjectDir()}/channel")
-//    //configFile = new File("${project.getProjectDir()}/config.json")
-//}
+walle {
+    apkOutputFolder = new File("${project.buildDir}/outputs/channels")
+    apkFileNameFormat = '${appName}-${packageName}-${channel}-${buildType}-v${versionName}-${versionCode}-${buildTime}-${flavorName}.apk'
+    //configFile与channelFile两者必须存在一个，否则无法生成渠道包。两者都存在时优先执行configFile
+    channelFile = new File("${project.getProjectDir()}/channel")
+    //configFile = new File("${project.getProjectDir()}/config.json")
+}
 
 
 // 根据不同的applicationId来配置不同的channelFile／configFile
