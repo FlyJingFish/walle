@@ -21,7 +21,7 @@ public final class Main {
         super();
     }
 
-    public static void main(final String[] args) throws Exception {
+    public static void main(final String[] args) {
         final Map<String, IWalleCommand> subCommandList = new HashMap<String, IWalleCommand>();
         subCommandList.put("show", new ShowCommand());
         subCommandList.put("rm", new RemoveCommand());

@@ -95,20 +95,17 @@ public final class PayloadWriter {
      * @throws SignatureNotFoundException
      */
     public static void putAll(final File apkFile, final Map<Integer, ByteBuffer> idValues, final boolean lowMemory) throws IOException, SignatureNotFoundException {
-        handleApkSigningBlock(apkFile, new ApkSigningBlockHandler() {
-            @Override
-            public ApkSigningBlock handle(final Map<Integer, ByteBuffer> originIdValues) {
-                if (idValues != null && !idValues.isEmpty()) {
-                    originIdValues.putAll(idValues);
-                }
-                final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
-                final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
-                for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
-                    final ApkSigningPayload payload = new ApkSigningPayload(entry.getKey(), entry.getValue());
-                    apkSigningBlock.addPayload(payload);
-                }
-                return apkSigningBlock;
+        handleApkSigningBlock(apkFile, originIdValues -> {
+            if (idValues != null && !idValues.isEmpty()) {
+                originIdValues.putAll(idValues);
             }
+            final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
+            final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
+            for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
+                final ApkSigningPayload payload = new ApkSigningPayload(entry.getKey(), entry.getValue());
+                apkSigningBlock.addPayload(payload);
+            }
+            return apkSigningBlock;
         }, lowMemory);
     }
     /**
@@ -132,19 +129,16 @@ public final class PayloadWriter {
      * @throws SignatureNotFoundException
      */
     public static void remove(final File apkFile, final int id, final boolean lowMemory) throws IOException, SignatureNotFoundException {
-        PayloadWriter.handleApkSigningBlock(apkFile, new PayloadWriter.ApkSigningBlockHandler() {
-            @Override
-            public ApkSigningBlock handle(final Map<Integer, ByteBuffer> originIdValues) {
-                final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
-                final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
-                for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
-                    if (entry.getKey() != id) {
-                        final ApkSigningPayload payload = new ApkSigningPayload(entry.getKey(), entry.getValue());
-                        apkSigningBlock.addPayload(payload);
-                    }
+        handleApkSigningBlock(apkFile, originIdValues -> {
+            final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
+            final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
+            for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
+                if (entry.getKey() != id) {
+                    final ApkSigningPayload payload = new ApkSigningPayload(entry.getKey(), entry.getValue());
+                    apkSigningBlock.addPayload(payload);
                 }
-                return apkSigningBlock;
             }
+            return apkSigningBlock;
         }, lowMemory);
     }
 
