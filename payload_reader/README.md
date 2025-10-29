@@ -2,7 +2,7 @@
 
 ```groovy
 dependencies {
-    compile 'com.meituan.android.walle:payload_reader:1.1.7'
+    compile 'io.github.flyjingfish:walle-payload-reader:1.0.0'
 }
 ```
 

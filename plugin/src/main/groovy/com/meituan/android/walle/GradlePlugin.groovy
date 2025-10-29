@@ -45,7 +45,7 @@ class GradlePlugin implements org.gradle.api.Plugin<Project> {
         }
 
 //        project.dependencies {
-//            compile 'com.meituan.android.walle:library:' + getVersion()
+//            compile 'io.github.flyjingfish:walle-library:' + getVersion()
 //        }
 
         applyExtension(project);
