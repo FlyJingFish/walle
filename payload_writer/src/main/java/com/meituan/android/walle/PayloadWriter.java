@@ -1,9 +1,13 @@
 package com.meituan.android.walle;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -30,6 +34,9 @@ public final class PayloadWriter {
     public static void put(final File apkFile, final int id, final String string) throws IOException, SignatureNotFoundException {
         put(apkFile, id, string, false);
     }
+    public static void put(final File apkFile,OutputStream outputStream, final int id, final String string) throws IOException, SignatureNotFoundException {
+        put(apkFile,outputStream, id, string, false);
+    }
     /**
      * put (id, String) into apk, update if id exists
      * @param apkFile apk file
@@ -47,6 +54,15 @@ public final class PayloadWriter {
         byteBuffer.flip();
         put(apkFile, id, byteBuffer, lowMemory);
     }
+
+    public static void put(final File apkFile,OutputStream outputStream, final int id, final String string, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        final byte[] bytes = string.getBytes(ApkUtil.DEFAULT_CHARSET);
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(bytes.length);
+        byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        byteBuffer.put(bytes, 0, bytes.length);
+        byteBuffer.flip();
+        put(apkFile,outputStream, id, byteBuffer, lowMemory);
+    }
     /**
      * put (id, buffer) into apk, update if id exists
      *
@@ -58,6 +74,10 @@ public final class PayloadWriter {
      */
     public static void put(final File apkFile, final int id, final ByteBuffer buffer) throws IOException, SignatureNotFoundException {
         put(apkFile, id, buffer, false);
+    }
+
+    public static void put(final File apkFile,OutputStream outputStream, final int id, final ByteBuffer buffer) throws IOException, SignatureNotFoundException {
+        put(apkFile,outputStream, id, buffer, false);
     }
 
     /**
@@ -74,6 +94,11 @@ public final class PayloadWriter {
         idValues.put(id, buffer);
         putAll(apkFile, idValues, lowMemory);
     }
+    public static void put(final File apkFile,OutputStream outputStream,  final int id, final ByteBuffer buffer, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        final Map<Integer, ByteBuffer> idValues = new HashMap<Integer, ByteBuffer>();
+        idValues.put(id, buffer);
+        putAll(apkFile,outputStream, idValues, lowMemory);
+    }
     /**
      * put new idValues into apk, update if id exists
      *
@@ -84,6 +109,9 @@ public final class PayloadWriter {
      */
     public static void putAll(final File apkFile, final Map<Integer, ByteBuffer> idValues) throws IOException, SignatureNotFoundException {
         putAll(apkFile, idValues, false);
+    }
+    public static void putAll(final File apkFile,OutputStream outputStream, final Map<Integer, ByteBuffer> idValues) throws IOException, SignatureNotFoundException {
+        putAll(apkFile,outputStream, idValues, false);
     }
     /**
      * put new idValues into apk, update if id exists
@@ -108,6 +136,21 @@ public final class PayloadWriter {
             return apkSigningBlock;
         }, lowMemory);
     }
+
+    public static void putAll(final File apkFile,OutputStream outputStream, final Map<Integer, ByteBuffer> idValues, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        handleApkSigningBlock(apkFile,outputStream, originIdValues -> {
+            if (idValues != null && !idValues.isEmpty()) {
+                originIdValues.putAll(idValues);
+            }
+            final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
+            final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
+            for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
+                final ApkSigningPayload payload = new ApkSigningPayload(entry.getKey(), entry.getValue());
+                apkSigningBlock.addPayload(payload);
+            }
+            return apkSigningBlock;
+        }, lowMemory);
+    }
     /**
      * remove content by id
      *
@@ -118,6 +161,9 @@ public final class PayloadWriter {
      */
     public static void remove(final File apkFile, final int id) throws IOException, SignatureNotFoundException {
         remove(apkFile, id, false);
+    }
+    public static void remove(final File apkFile,OutputStream outputStream, final int id) throws IOException, SignatureNotFoundException {
+        remove(apkFile,outputStream, id, false);
     }
     /**
      * remove content by id
@@ -130,6 +176,20 @@ public final class PayloadWriter {
      */
     public static void remove(final File apkFile, final int id, final boolean lowMemory) throws IOException, SignatureNotFoundException {
         handleApkSigningBlock(apkFile, originIdValues -> {
+            final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
+            final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
+            for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
+                if (entry.getKey() != id) {
+                    final ApkSigningPayload payload = new ApkSigningPayload(entry.getKey(), entry.getValue());
+                    apkSigningBlock.addPayload(payload);
+                }
+            }
+            return apkSigningBlock;
+        }, lowMemory);
+    }
+
+    public static void remove(final File apkFile,OutputStream outputStream, final int id, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        handleApkSigningBlock(apkFile,outputStream, originIdValues -> {
             final ApkSigningBlock apkSigningBlock = new ApkSigningBlock();
             final Set<Map.Entry<Integer, ByteBuffer>> entrySet = originIdValues.entrySet();
             for (Map.Entry<Integer, ByteBuffer> entry : entrySet) {
@@ -288,4 +348,94 @@ public final class PayloadWriter {
             }
         }
     }
+
+    static void handleApkSigningBlock(
+            File apkFile,
+            OutputStream outputStream,
+            ApkSigningBlockHandler handler,
+            boolean lowMemory
+    ) throws IOException, SignatureNotFoundException {
+
+        RandomAccessFile fIn = null;
+        FileChannel fileChannel = null;
+        try {
+            fIn = new RandomAccessFile(apkFile, "r");
+            fileChannel = fIn.getChannel();
+
+            final long commentLength = ApkUtil.getCommentLength(fileChannel);
+            final long centralDirStartOffset = ApkUtil.findCentralDirStartOffset(fileChannel, commentLength);
+
+            // 读取 APK Signing Block
+            final Pair<ByteBuffer, Long> apkSigningBlockAndOffset = ApkUtil.findApkSigningBlock(fileChannel, centralDirStartOffset);
+            final ByteBuffer apkSigningBlock2 = apkSigningBlockAndOffset.getFirst();
+            final long apkSigningBlockOffset = apkSigningBlockAndOffset.getSecond();
+
+            final Map<Integer, ByteBuffer> originIdValues = ApkUtil.findIdValues(apkSigningBlock2);
+            final ByteBuffer apkSignatureSchemeV2Block = originIdValues.get(ApkUtil.APK_SIGNATURE_SCHEME_V2_BLOCK_ID);
+            if (apkSignatureSchemeV2Block == null) {
+                throw new IOException("No APK Signature Scheme v2 block in APK Signing Block");
+            }
+
+            final boolean needPadding = originIdValues.remove(ApkUtil.VERITY_PADDING_BLOCK_ID) != null;
+            final ApkSigningBlock apkSigningBlock = handler.handle(originIdValues);
+
+            if (needPadding) {
+                int blocksSize = 0;
+                for (ApkSigningPayload payload : apkSigningBlock.getPayloads()) {
+                    blocksSize += payload.getTotalSize();
+                }
+
+                int resultSize = 8 + blocksSize + 8 + 16;
+                if (resultSize % ApkUtil.ANDROID_COMMON_PAGE_ALIGNMENT_BYTES != 0) {
+                    int padding = ApkUtil.ANDROID_COMMON_PAGE_ALIGNMENT_BYTES - 12
+                            - (resultSize % ApkUtil.ANDROID_COMMON_PAGE_ALIGNMENT_BYTES);
+                    if (padding < 0) {
+                        padding += ApkUtil.ANDROID_COMMON_PAGE_ALIGNMENT_BYTES;
+                    }
+                    final ByteBuffer dummy = ByteBuffer.allocate(padding).order(ByteOrder.LITTLE_ENDIAN);
+                    apkSigningBlock.addPayload(new ApkSigningPayload(ApkUtil.VERITY_PADDING_BLOCK_ID, dummy));
+                }
+            }
+
+            // Step 1️⃣：复制 CentralDir 之前的所有字节（含 Zip 内容部分）
+            try (FileInputStream in = new FileInputStream(apkFile)) {
+                byte[] buffer = new byte[8192];
+                long toRead = apkSigningBlockOffset;
+                while (toRead > 0) {
+                    int read = in.read(buffer, 0, (int) Math.min(buffer.length, toRead));
+                    if (read == -1) break;
+                    outputStream.write(buffer, 0, read);
+                    toRead -= read;
+                }
+            }
+
+            // Step 2️⃣：写入新的 ApkSigningBlock
+            ByteArrayOutputStream blockBuffer = new ByteArrayOutputStream();
+            DataOutputStream dataOut = new DataOutputStream(blockBuffer);
+            long blockLength = apkSigningBlock.writeApkSigningBlock(dataOut);
+            dataOut.flush();
+            outputStream.write(blockBuffer.toByteArray());
+
+            // Step 3️⃣：写入 CentralDir 和 EOCD
+            fIn.seek(centralDirStartOffset);
+            byte[] remaining = new byte[(int) (fileChannel.size() - centralDirStartOffset)];
+            fIn.readFully(remaining);
+            ByteBuffer eocdOffsetBuffer = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN);
+            eocdOffsetBuffer.putInt((int) (centralDirStartOffset + blockLength + 8 - (centralDirStartOffset - apkSigningBlockOffset)));
+            eocdOffsetBuffer.flip();
+
+            // 更新 EOCD 偏移字段
+            int eocdOffsetPos = remaining.length - (int) commentLength - 6;
+            System.arraycopy(eocdOffsetBuffer.array(), 0, remaining, eocdOffsetPos, 4);
+
+            outputStream.write(remaining);
+            outputStream.flush();
+
+        } finally {
+            if (fileChannel != null) fileChannel.close();
+            if (fIn != null) fIn.close();
+        }
+    }
+
+
 }

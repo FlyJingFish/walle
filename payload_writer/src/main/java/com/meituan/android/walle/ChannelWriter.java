@@ -4,6 +4,8 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,6 +26,9 @@ public final class ChannelWriter {
     public static void put(final File apkFile, final String channel) throws IOException, SignatureNotFoundException {
         put(apkFile, channel, false);
     }
+    public static void put(final File apkFile, OutputStream outputStream, final String channel) throws IOException, SignatureNotFoundException {
+        put(apkFile,outputStream, channel, false);
+    }
     /**
      * write channel with channel fixed id
      *
@@ -36,6 +41,9 @@ public final class ChannelWriter {
     public static void put(final File apkFile, final String channel, final boolean lowMemory) throws IOException, SignatureNotFoundException {
         put(apkFile, channel, null, lowMemory);
     }
+    public static void put(final File apkFile, OutputStream outputStream, final String channel, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        put(apkFile,outputStream, channel, null, lowMemory);
+    }
     /**
      * write channel & extra info with channel fixed id
      *
@@ -47,6 +55,9 @@ public final class ChannelWriter {
      */
     public static void put(final File apkFile, final String channel, final Map<String, String> extraInfo) throws IOException, SignatureNotFoundException {
         put(apkFile, channel, extraInfo, false);
+    }
+    public static void put(final File apkFile, OutputStream outputStream, final String channel, final Map<String, String> extraInfo) throws IOException, SignatureNotFoundException {
+        put(apkFile,outputStream, channel, extraInfo, false);
     }
     /**
      * write channel & extra info with channel fixed id
@@ -75,6 +86,24 @@ public final class ChannelWriter {
         final JSONObject jsonObject = new JSONObject(newData);
         putRaw(apkFile, jsonObject.toString(), lowMemory);
     }
+
+    public static void put(final File apkFile, OutputStream outputStream, final String channel, final Map<String, String> extraInfo, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        final Map<String, String> newData = new HashMap<String, String>();
+        final Map<String, String> existsData = ChannelReader.getMap(apkFile);
+        if (existsData != null) {
+            newData.putAll(existsData);
+        }
+        if (extraInfo != null) {
+            // can't use
+            extraInfo.remove(ChannelReader.CHANNEL_KEY);
+            newData.putAll(extraInfo);
+        }
+        if (channel != null && channel.length() > 0) {
+            newData.put(ChannelReader.CHANNEL_KEY, channel);
+        }
+        final JSONObject jsonObject = new JSONObject(newData);
+        putRaw(apkFile,outputStream, jsonObject.toString(), lowMemory);
+    }
     /**
      * write custom content with channel fixed id <br/>
      * NOTE: {@link ChannelReader#get(File)}  and {@link ChannelReader#getMap(File)}  may be affected
@@ -86,6 +115,10 @@ public final class ChannelWriter {
      */
     public static void putRaw(final File apkFile, final String string) throws IOException, SignatureNotFoundException {
         putRaw(apkFile, string, false);
+    }
+
+    public static void putRaw(final File apkFile, OutputStream outputStream, final String string) throws IOException, SignatureNotFoundException {
+        putRaw(apkFile,outputStream, string, false);
     }
     /**
      * write custom content with channel fixed id<br/>
@@ -99,6 +132,9 @@ public final class ChannelWriter {
      */
     public static void putRaw(final File apkFile, final String string, final boolean lowMemory) throws IOException, SignatureNotFoundException {
         PayloadWriter.put(apkFile, ApkUtil.APK_CHANNEL_BLOCK_ID, string, lowMemory);
+    }
+    public static void putRaw(final File apkFile, OutputStream outputStream, final String string, final boolean lowMemory) throws IOException, SignatureNotFoundException {
+        PayloadWriter.put(apkFile,outputStream, ApkUtil.APK_CHANNEL_BLOCK_ID, string, lowMemory);
     }
     /**
      * remove channel id content
